@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"fmt"
-	"log"
 	"os"
 	"os/signal"
 	"strconv"
@@ -14,10 +13,12 @@ import (
 	"github.com/knadh/koanf"
 	"github.com/knadh/koanf/parsers/json"
 	"github.com/knadh/koanf/providers/file"
+	"go.uber.org/zap"
 )
 
 var conf = koanf.New(".")
 var dbPool *pgxpool.Pool
+var log *zap.SugaredLogger
 
 func init() {
 	err := conf.Load(file.Provider("config.json"), json.Parser())
@@ -32,8 +33,12 @@ func init() {
 	}
 }
 
-//TODO: add better logging later, this is just a quick little demo
 func main() {
+
+	logger, _ := zap.NewProduction()
+	defer logger.Sync()
+	log = logger.Sugar()
+
 	discord, err := discordgo.New("Bot " + conf.String("General.token"))
 	if err != nil {
 		log.Fatalf("Could not initialize bot, %s", err)
@@ -69,13 +74,15 @@ func guildCreate(session *discordgo.Session, event *discordgo.GuildCreate) {
 
 	newUsers, err := lookUpNewUsers(event.Guild.Members, session.State.User.ID)
 	if err != nil {
-		log.Fatalf("Could not lookup new users, %s", err)
+		log.Errorf("Could not lookup new users, %s", err)
+		return
 	}
 
 	if len(newUsers) > 0 {
 		err = addUsersToDB(newUsers)
 		if err != nil {
-			log.Fatalf("Could not add new users to db, %s", err)
+			log.Errorf("Could not add new users to db, %s", err)
+			return
 		}
 	}
 }
@@ -83,7 +90,7 @@ func guildCreate(session *discordgo.Session, event *discordgo.GuildCreate) {
 func guildMemberAdd(session *discordgo.Session, event *discordgo.GuildMemberAdd) {
 	exists, err := doesUserExistInDB(event.User.ID)
 	if err != nil {
-		fmt.Printf("Error checking the db for user existance, %s \n", err)
+		log.Errorf("Error checking the db for user existance, %s \n", err)
 		return
 	}
 
@@ -92,7 +99,7 @@ func guildMemberAdd(session *discordgo.Session, event *discordgo.GuildMemberAdd)
 		newUser := user{event.User.ID, 1}
 		err = addUsersToDB([]user{newUser})
 		if err != nil {
-			log.Fatalf("Could not add a new user to the db, %s", err)
+			log.Errorf("Could not add a new user to the db, %s", err)
 			return
 		}
 	}
@@ -111,7 +118,7 @@ func messageCreate(session *discordgo.Session, m *discordgo.MessageCreate) {
 		user, err := getUserStatus(m.Author.ID)
 		if err != nil {
 			session.ChannelMessageSend(m.ChannelID, "Error getting user information")
-			fmt.Printf("Error getting user information: %s", err)
+			log.Errorf("Error getting user information: %s", err)
 			return
 		}
 
@@ -120,7 +127,7 @@ func messageCreate(session *discordgo.Session, m *discordgo.MessageCreate) {
 		err := levelup(m.Author.ID)
 		if err != nil {
 			session.ChannelMessageSend(m.ChannelID, "Error leveling up")
-			fmt.Printf("Error leveling up: %s", err)
+			log.Errorf("Error leveling up: %s", err)
 			return
 		}
 
