@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
-	"strconv"
 	"syscall"
 
 	"github.com/bwmarrin/discordgo"
@@ -95,15 +94,12 @@ func guildMemberAdd(session *discordgo.Session, event *discordgo.GuildMemberAdd)
 	}
 
 	if !exists {
-		//TODO: make default status a constant (maybe from conf)
-		newUser := user{event.User.ID, 1}
-		err = addUsersToDB([]user{newUser})
+		err = addUsersToDB([]user{createDefaultUserStruct(event.User.ID)})
 		if err != nil {
 			log.Errorf("Could not add a new user to the db, %s", err)
 			return
 		}
 	}
-
 }
 
 func messageCreate(session *discordgo.Session, m *discordgo.MessageCreate) {
@@ -122,7 +118,12 @@ func messageCreate(session *discordgo.Session, m *discordgo.MessageCreate) {
 			return
 		}
 
-		session.ChannelMessageSend(m.ChannelID, m.Author.Username+"'s level is "+strconv.Itoa(user.level))
+		_, err = session.ChannelMessageSend(m.ChannelID, m.Author.Username+"'s stats\n"+user.String())
+		if err != nil {
+			log.Errorf("Could not send message, %s", err)
+			return
+		}
+
 	case "!levelup":
 		err := levelup(m.Author.ID)
 		if err != nil {
