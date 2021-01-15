@@ -10,28 +10,30 @@ import (
 )
 
 const (
-	level = 1
-	exp   = 0
-	maxHP = 100
-	maxMP = 50
-	str   = 1
-	agi   = 1
-	dex   = 1
-	def   = 1
+	level        = 1
+	exp          = 0
+	maxHP        = 100
+	maxMP        = 50
+	strength     = 1
+	agility      = 1
+	intelligence = 1
+	defence      = 1
+	mDefence     = 1
 )
 
 type user struct {
-	userID    string
-	level     int
-	exp       int
-	maxHp     int
-	currentHP int
-	maxMp     int
-	currentMP int
-	str       int
-	agi       int
-	dex       int
-	def       int
+	userID       string
+	level        int
+	exp          int
+	maxHp        int
+	currentHP    int
+	maxMp        int
+	currentMP    int
+	strength     int
+	agility      int
+	intelligence int
+	defence      int
+	mDefence     int
 }
 
 func (user user) String() string {
@@ -41,10 +43,11 @@ func (user user) String() string {
 		"\tCurrent HP " + strconv.Itoa(user.currentHP) + "\n" +
 		"Max MP " + strconv.Itoa(user.maxMp) +
 		"\tCurrent MP " + strconv.Itoa(user.currentMP) + "\n" +
-		"Str " + strconv.Itoa(user.str) + "\n" +
-		"Agi " + strconv.Itoa(user.agi) + "\n" +
-		"Dex " + strconv.Itoa(user.dex) + "\n" +
-		"Def " + strconv.Itoa(user.def)
+		"Strength " + strconv.Itoa(user.strength) + "\n" +
+		"Agility " + strconv.Itoa(user.agility) + "\n" +
+		"Intelligence " + strconv.Itoa(user.intelligence) + "\n" +
+		"Defence " + strconv.Itoa(user.defence) + "\n" +
+		"Magic Defence " + strconv.Itoa(user.mDefence)
 
 	return userString
 }
@@ -91,11 +94,11 @@ func addUsersToDB(users []user) error {
 	// Instead of doing multiple insert statements, inserting all the users using copyFrom
 	_, err := dbPool.CopyFrom(context.Background(), pgx.Identifier{"users"},
 		[]string{"user_id", "level", "exp", "max_hp", "current_hp",
-			"max_mp", "current_mp", "str", "agi", "dex", "def"},
+			"max_mp", "current_mp", "strength", "agility", "intelligence", "defence", "magic_defence"},
 		pgx.CopyFromSlice(len(users), func(i int) ([]interface{}, error) {
 			user := users[i]
 			return []interface{}{stringToInt(user.userID), user.level, user.exp, user.maxHp, user.currentHP,
-				user.maxMp, user.currentMP, user.str, user.agi, user.dex, user.def}, nil
+				user.maxMp, user.currentMP, user.strength, user.agility, user.intelligence, user.defence, user.mDefence}, nil
 		}))
 
 	return err
@@ -105,9 +108,10 @@ func getUserStatus(userID string) (user, error) {
 
 	user := user{userID: userID}
 	err := dbPool.QueryRow(context.Background(),
-		"SELECT level,exp,max_hp,current_hp,max_mp,current_mp,str,agi,dex,def FROM users WHERE user_id=$1",
+		"SELECT level,exp,max_hp,current_hp,max_mp,current_mp,strength,agility,"+
+			"intelligence,defence,magic_defence FROM users WHERE user_id=$1",
 		userID).Scan(&user.level, &user.exp, &user.maxHp, &user.currentHP, &user.maxMp, &user.currentMP,
-		&user.str, &user.agi, &user.dex, &user.def)
+		&user.strength, &user.agility, &user.intelligence, &user.defence, &user.mDefence)
 	if err != nil {
 		return user, err
 	}
@@ -143,16 +147,17 @@ func levelup(userID string) error {
 
 func createDefaultUserStruct(userID string) user {
 	return user{
-		userID:    userID,
-		level:     level,
-		exp:       exp,
-		maxHp:     maxHP,
-		currentHP: maxHP,
-		maxMp:     maxMP,
-		currentMP: maxMP,
-		str:       str,
-		agi:       agi,
-		dex:       dex,
-		def:       def,
+		userID:       userID,
+		level:        level,
+		exp:          exp,
+		maxHp:        maxHP,
+		currentHP:    maxHP,
+		maxMp:        maxMP,
+		currentMP:    maxMP,
+		strength:     strength,
+		agility:      agility,
+		intelligence: intelligence,
+		defence:      defence,
+		mDefence:     mDefence,
 	}
 }
