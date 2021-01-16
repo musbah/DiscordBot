@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"errors"
+	"math"
 	"strconv"
 
 	"github.com/bwmarrin/discordgo"
@@ -160,4 +161,9 @@ func createDefaultUserStruct(userID string) user {
 		defence:      defence,
 		mDefence:     mDefence,
 	}
+}
+
+// Returns exp required for the next level
+func nextLevelExp(level int) int {
+	return int(math.Round((4 * (math.Pow(float64(level), 3))) / 5))
 }
